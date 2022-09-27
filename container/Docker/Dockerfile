@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mssql/server
+FROM mcr.microsoft.com/mssql/server:2019-latest
 
 # Switch to root user for access to apt-get install
 USER root
