@@ -23,7 +23,7 @@ docker build -t mssql-bak-bacpac .
 # This will create a local container named bak-to-bacpac from the mssql-bak-bacpac image and run it
 # This will process any .bak files in the localDockerHostDirectory
 
-$localdockerrun = ('docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=__SA_PASSWORD__" -v __LOCAL_HOST_DIRECTORY__:/mnt/external  --name bak-to-bacpac mssql-bak-bacpac' -replace '__SA_PASSWORD__', $containerSaPassword.GetNetworkCredential().Password -replace '__LOCAL_HOST_DIRECTORY__',$localDockerHostDirectory)
+$localdockerrun = ('docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=__SA_PASSWORD__" -v __LOCAL_HOST_DIRECTORY__:/mnt/external  --name bak-to-bacpac mssql-bak-bacpac' -replace '__SA_PASSWORD__', $containerSaPassword.GetNetworkCredential().Password -replace '__LOCAL_HOST_DIRECTORY__',$localDockerHostDirectory)
 
 Invoke-Expression $localdockerrun
 
