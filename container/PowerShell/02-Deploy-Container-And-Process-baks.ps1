@@ -40,12 +40,12 @@ foreach ($file in $files) {
 #region Create a new Azure Container Instance group 
 
 #region Variables
-$SA_PASSWORD = $containerSaPassword.GetNetworkCredential().Password
+$MSSQL_SA_PASSWORD = $containerSaPassword.GetNetworkCredential().Password
 $ACRLoginServer = (Get-AzContainerRegistry -ResourceGroupName $ResourceGroupName -Name $ACRName).LoginServer 
 $ACRUser = (Get-AzKeyVaultSecret -VaultName $KVName  -Name 'acr-pull-user').SecretValueText 
 $ACRPass = (Get-AzKeyVaultSecret -VaultName $KVName -Name 'acr-pull-pass').SecretValue 
 $ACRCred = New-Object System.Management.Automation.PSCredential ($ACRUser, $ACRPass) 
-$EnvVariables = @{ ACCEPT_EULA = "Y"; SA_PASSWORD = $SA_PASSWORD; MSSQL_PID = "Enterprise"; }
+$EnvVariables = @{ ACCEPT_EULA = "Y"; MSSQL_SA_PASSWORD = $MSSQL_SA_PASSWORD; MSSQL_PID = "Enterprise"; }
 $StorageAcctKey = (Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName)[0].Value | ConvertTo-SecureString -AsPlainText -Force 
 $StorageAcctCred = New-Object System.Management.Automation.PSCredential($StorageAccountName, $StorageAcctKey)
 #endregion
