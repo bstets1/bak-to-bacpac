@@ -41,33 +41,25 @@ foreach ($file in $files) {
 
 #region Variables
 $MSSQL_SA_PASSWORD = $containerSaPassword.GetNetworkCredential().Password
-$ACRLoginServer = (Get-AzContainerRegistry -ResourceGroupName $ResourceGroupName -Name $ACRName).LoginServer 
-$ACRUser = (Get-AzKeyVaultSecret -VaultName $KVName  -Name 'acr-pull-user').SecretValueText 
-$ACRPass = (Get-AzKeyVaultSecret -VaultName $KVName -Name 'acr-pull-pass').SecretValue 
-$ACRCred = New-Object System.Management.Automation.PSCredential ($ACRUser, $ACRPass) 
-$EnvVariables = @{ ACCEPT_EULA = "Y"; MSSQL_SA_PASSWORD = $MSSQL_SA_PASSWORD; MSSQL_PID = "Enterprise"; }
-$StorageAcctKey = (Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName)[0].Value | ConvertTo-SecureString -AsPlainText -Force 
-$StorageAcctCred = New-Object System.Management.Automation.PSCredential($StorageAccountName, $StorageAcctKey)
+$ACRLoginServer = Get-AzContainerRegistry -ResourceGroupName $ResourceGroupName -Name $ACRName
+$ACRLoginServer = $ACRLoginServer.LoginServer
+$ACRUser = Get-AzKeyVaultSecret -VaultName $KVName  -Name 'acr-pull-user' -AsPlainText
+$ACRPass = Get-AzKeyVaultSecret -VaultName $KVName -Name 'acr-pull-pass'
+#$ACRPass = $ACRPass.SecretValue 
+$StorageAcctKey = (Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName)[0].Value | ConvertTo-SecureString -AsPlainText -Force
+
 #endregion
 
 if (-not(Get-AzContainerGroup -ResourceGroupName $ResourceGroupName -Name $ContainerGroupName -ErrorAction SilentlyContinue)) {
-    $NewContainerGroupParams = @{
-        Name                             = $ContainerGroupName
-        ResourceGroupName                = $ResourceGroupName
-        Image                            = "$ACRLoginServer/$ACRPath"
-        RegistryServerDomain             = $ACRLoginServer
-        RegistryCredential               = $ACRCred
-        DnsNameLabel                     = $ContainerGroupName
-        IpAddressType                    = 'Public'
-        EnvironmentVariable              = $EnvVariables
-        AzureFileVolumeAccountCredential = $StorageAcctCred
-        AzureFileVolumeShareName         = $ShareName
-        AzureFileVolumeMountPath         = $VolumeMountPath
-        OsType                           = 'Linux'
-        Cpu                              = 2
-        MemoryInGB                       = 4
-    }
-    New-AzContainerGroup @NewContainerGroupParams
+    $port = New-AzContainerInstancePortObject -Port '1433' -Protocol 'TCP'
+    $EnvVariable1 = New-AzContainerInstanceEnvironmentVariableObject -Name ACCEPT_EULA -Value Y 
+    $EnvVariable2 = New-AzContainerInstanceEnvironmentVariableObject -Name MSSQL_SA_PASSWORD -SecureValue $MSSQL_SA_PASSWORD
+    $EnvVariable3 = New-AzContainerInstanceEnvironmentVariableObject -Name MSSQL_PID -Value Enterprise
+    $regCred = New-AzContainerGroupImageRegistryCredentialObject -Server $ACRLoginServer -Username $ACRUser -Password $ACRPass
+    $volume = New-AzContainerGroupVolumeObject -Name $ShareName -AzureFileShareName $ShareName -AzureFileStorageAccountName $StorageAccountName -AzureFileStorageAccountKey $StorageAcctKey
+    $mount = New-AzContainerInstanceVolumeMountObject -MountPath $VolumeMountPath -Name $ShareName
+    $container = New-AzContainerInstanceObject -Name $ContainerGroupName -Image "$ACRLoginServer/$ACRPath" -EnvironmentVariable @($EnvVariable1, $EnvVariable2, $EnvVariable3)  -Port $port -RequestCpu 2 -RequestMemoryInGb 4 -VolumeMount $mount
+    New-AzContainerGroup -ResourceGroupName $ResourceGroupName -Name $ContainerGroupName -Location $Location -Container $container -ImageRegistryCredential $regCred -OSType Linux -IPAddressType 'Public' -Volume $volume
 
     Write-Host "Container group ($ContainerGroupName) created."
 }else {
